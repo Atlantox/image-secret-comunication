@@ -17,7 +17,7 @@ import getpass
 from rich.progress import track
 import sys
 
-DEBUG = False
+DEBUG = True
 console = Console()
 headerText = "M6nMjy5THr2J"
 

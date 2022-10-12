@@ -1,41 +1,17 @@
 from PIL import Image
-import os.path
-from os import path
-import math
-from Crypto.Cipher import AES
-from Crypto.Hash import SHA256
-from Crypto import Random
-import base64
-from colorama import init
-from termcolor import cprint 
-from pyfiglet import figlet_format
 from rich import print
-from rich.console import Console
-from rich.table import Table
-import os
-import getpass
-from rich.progress import track
-import sys
-
-
 
 checkpoint = '1A10x20R22'
+DEBUG = True
 
 def main():
     path = 'prueba.png'
-    message = checkpoint + 'mensajito'
+    message = checkpoint + 'mensajito largo'
     secret = ''
-    for letter in message:
-        secret += format(ord(letter), '08b')
+    password = ''
 
-    encrpytImage(path, secret)
+    crpyt_image(path, message, password)
     
-
-
-   
-
-
-
 
 def convertToRGB(image):
     try:
@@ -43,144 +19,120 @@ def convertToRGB(image):
         rgba_image.load()
         background = Image.new("RGB", rgba_image.size)
         background.paste(rgba_image, mask = rgba_image.split()[3])
-        print("[yellow]Converted image to RGB [/yellow]")
+        print("[green]Image converted to RGB[/green]")
         return background
     except Exception as e:
-        print("[red]Couldn't convert image to RGB [/red]- %s"%e)
+        print("[red]Couldn't convert image to RGB[/red]- %s"%e)
 
 
+def crpyt_image(path, message, password):
+    secretmsg = ''
+    for letter in message:
+        secretmsg += format(ord(letter), '08b')
+    
+    splited_s = [secretmsg[i:i+8] for i in range(0, len(secretmsg), 8)]
+    #  Splitting the secret message of 8 in 8
 
-
-def encrpytImage(path, secret):
-    splited_s = [secret[i:i+8] for i in range(0, len(secret), 8)]
-    #  Splitting the secret message of 3 in 3
     pixels_to_modify = len(splited_s)*3
-    print(f'pixels to modify: {pixels_to_modify}')
+    #  Each group of 8 bits consumes 3 pixels
+    print(f'Pixels to modify: [cyan]{pixels_to_modify}[/cyan]')
+    print('\n[yellow]### BEGINNING ENCRYPTION ###[/yellow]\n')
 
-    with Image.open(path) as im:
-        width, height = im.size
-        if im.mode != 'RGB':
-            im = convertToRGB(im)
+    colors = ['red', 'green', 'blue']
+
+    with Image.open(path) as img:
+        width,height = img.size
+        if img.mode != 'RGB':
+            img = convertToRGB(img)
         x = 0
         y = 0
-        groups_ready = 0
-        new_row = False
+        bits_writed = 0
+        pixel_count = 1
 
-        for bit_group in splited_s:
-            p1 = {
-                'coord': (x,y),
-                'value': im.getpixel((x,y))
-                }
+        while (bits_writed < pixels_to_modify / 3):
+            if(DEBUG):
+                print(f'Current letter: [cyan]{message[bits_writed]}[/cyan]')
+                print(f'Binary value: [cyan]{splited_s[bits_writed]}[/cyan]')
 
-            if x + 1 >= width:
-                x = -1
-                y += 1
-                new_row = True
+            pixels = [None, None, None]
+            coords = list()
 
-            p2 = {
-                'coord': (x + 1,y),
-                'value': im.getpixel((x + 1,y))
-                }
+            pixels[0] = img.getpixel((x, y))
+            coords.append((x,y))
 
-            if new_row:
-                x = 0
-                new_row = False
+            x, y = checkXY(width, x + 1, y)
+            coords.append((x,y))
+            pixels[1] = img.getpixel((x, y))
 
-            if x + 2 >= width:
-                x = - 2
-                y += 1
-                new_row = True            
+            x, y = checkXY(width, x + 1, y)
+            coords.append((x,y))
+            pixels[2] = img.getpixel((x, y))
 
-            p3 = {
-                'coord': (x + 2,y),
-                'value': im.getpixel((x + 2,y))
-                }
+            new_pixels = list()
 
-            if new_row:
-                x = 0
-                new_row = False
+            to_write = splited_s[bits_writed]
+            to_write_splited = [to_write[i:i+3] for i in range(0, len(to_write), 3)]
+            for pixel in range(3): #  Pixels
+                new_bands = list()
 
-            pixel_list = [p1, p2, p3]
-            pixel_count = 0
-            pixel_band = 0
-            #print(pixel_list)
-            new_band_list = []
-            new_pixel_list = []
+                if DEBUG:
+                    print(f'Pixel [cyan]{pixel_count}[/cyan]')
 
-            for i in range(0,8):
-                current_band = pixel_list[pixel_count]['value'][pixel_band]
-                current_coord = pixel_list[pixel_count]['coord']
-                if bit_group[i] == '0':
-                    if current_band % 2 != 0:
-                        if current_band == 255:
-                            current_band -= 1
+                current_to_write = to_write_splited[pixel]
+                for band in range(3): #  Pixels bands (RGB)
+                    try:
+                        new_bands.append(get_new_band_value(current_to_write[band], pixels[pixel][band], colors[band]))
+                        if len(new_bands) == 3:
+                            new_pixels.append(new_bands)
+                            pixel_count += 1
+                    except IndexError:
+                        pixel_count += 1
+                        if bits_writed + 1 == pixels_to_modify / 3:
+                            new_bands.append(get_new_band_value('1', pixels[pixel][band], colors[band]))
+                            if DEBUG:
+                                print('[green]The message ends[/green]')
                         else:
-                            current_band += 1
-                    
-                elif bit_group[i] == '1':
-                    if current_band % 2 == 0:
-                        current_band += 1
-                
-                pixel_band += 1
-                
-                new_band_list.append(current_band)
-                
-                if i == 7:
-                    if pixels_to_modify / 3 == groups_ready + 1:
-                        new_band_list.append(0)
-                    if len(new_band_list) == 2:
-                        new_band_list.append(0)
-                    new_pixel_list.append({
-                        'coord': current_coord,
-                        'value': new_band_list
-                    })
-                    #break
-
-                if pixel_band == 3:
-                    new_pixel_list.append({
-                        'coord': current_coord,
-                        'value': new_band_list
-                    })
-
-                    new_band_list = []
-                    pixel_band = 0
-                    pixel_count += 1
-
-
-            if x == width - 1:
-                x = 0
-                y += 1
-            else:
-                x += 3
-                if x >= width:
-                    x = 0
-                    y+= 1
-        
-            groups_ready += 1
-
-            # add 0 to stop or 1 to continue
-            aux = pixel_list[2]['value'][2]
-            if pixels_to_modify / 3 == groups_ready:
-                if aux % 2 == 0:
-                    new_pixel_list[2]['value'][2] = aux + 1
-            else:
-                if aux % 2 != 0:
-                    if aux == 255:
-                        new_pixel_list[2]['value'][2] = aux - 1
-                    else:
-                        new_pixel_list[2]['value'][2] = aux + 1
+                            new_bands.append(get_new_band_value('0', pixels[pixel][band], colors[band]))
+                            if DEBUG:
+                                print('[yellow]The message continue[/yellow]')
+                        new_pixels.append(new_bands)
+                        if len(new_pixels) == 3:
+                            for i in range(len(coords)):
+                                img.putpixel((coords[i][0], coords[i][1]), tuple(new_pixels[i]))
+                print('')
+            x, y = checkXY(width, x + 1, y)
             
-            #print(new_pixel_list)
+            bits_writed += 1
+            if (bits_writed == pixels_to_modify / 3):
+                break
+        new_filename = 'listo' + '.png'
+        print('[green]Encrypt succesfull![/green]')
+        print(f'Image saved as [cyan]{new_filename}[/cyan]')
+        img.save(new_filename)
+        
 
-            print(pixel_list)
-            print(new_pixel_list)
+def get_new_band_value(bit, band, color):
+    old_band = band
+    if bit == '1':
+        if band % 2 == 0:
+            band += 1
+    
+    elif bit == '0':
+        if band % 2 != 0:
+            if band == 255:
+                band -= 1
+            else:
+                band += 1
+    if DEBUG:
+        print(f'[cyan]{bit}[/cyan]: [{color}]{old_band}->{band}[/{color}]')
+    return band
 
-            for pixel in new_pixel_list:
-                coord = pixel['coord'][0], pixel['coord'][1]
 
-                im.putpixel(coord, tuple(pixel['value']))
-
-        im.save('listo.png')
+def checkXY(w, x, y):
+    if x >= w:
+        x = 0
+        y += 1
+    return x, y
 
 
 def decrpytImage():

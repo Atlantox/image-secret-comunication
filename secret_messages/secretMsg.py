@@ -266,13 +266,13 @@ if __name__ == '__main__':
     print('[cyan][1] Crypt a message[/cyan]')
     print('[cyan][2] Decrpyt a message[/cyan]\n')
     option = input('')
-    if option != '1' or option != '2':
+    if option == '1' or option == '2':
         if option == '1':
             folder = './to_encode/'
         elif option == '2':
             folder = './to_decode/'
 
-        print(f"[yellow]Excellent!, please be sure to put the image in de '{folder}' folder[/yellow]")
+        print(f"[yellow]Excellent!, please be sure to put the image in the '{folder}' folder[/yellow]")
         print('[yellow]Now tell me the image name with extension[/yellow]')
         path = input('')
 

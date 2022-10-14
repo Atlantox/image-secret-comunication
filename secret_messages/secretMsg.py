@@ -185,16 +185,15 @@ def decrpyt_image(path, password):
         # Checks if the image have the mark, then the image has a secret message
 
         if image_mark == mark:  # If the image has a secret message
-            print('[green]The image has a secret message![/green]')
-        
             message = get_decrpyed_content(img)
 
             if password != '':
                 message = decrypt(message, password)
 
             if message == False:
-                print(f'[red]Incorrect password[/red]')
+                print("[red]The image don't has a secret message, at least not in our encoding[/red]")
             else:
+                print('[green]The image has a secret message![/green]')
                 print(f'[green]Message decrypted![/green]')
                 print(f'[yellow]{message}[/yellow]')
 

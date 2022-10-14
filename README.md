@@ -13,4 +13,6 @@ How you do that?
 5. Send the image
 6. Get the total domain of the world!
 
+If you want to watch how it works, see this video (spanish): https://www.youtube.com/watch?v=6gmMd1h6jxU
+
 In the future updates, Secret Messages will be executable and will be able of clean images!
